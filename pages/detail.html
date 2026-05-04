@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime Detail — AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="manga.html">Manga</a></li>
+    <li><a href="characters.html">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div id="detail-hero-area"></div>
+
+  <div class="section" id="detail-body" style="max-width:1200px">
+    <div class="tabs" id="detail-tabs" data-tabs>
+      <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+      <button class="tab-btn" data-tab="tab-characters">Characters</button>
+      <button class="tab-btn" data-tab="tab-episodes">Episodes</button>
+      <button class="tab-btn" data-tab="tab-recommendations">More Like This</button>
+      <button class="tab-btn" data-tab="tab-related">Related</button>
+    </div>
+
+    <div id="tab-overview" class="tab-panel active">
+      <div id="overview-content"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>
+    </div>
+    <div id="tab-characters" class="tab-panel">
+      <div id="chars-content"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>
+    </div>
+    <div id="tab-episodes" class="tab-panel">
+      <div id="eps-content"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>
+    </div>
+    <div id="tab-recommendations" class="tab-panel">
+      <div id="rec-content"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>
+    </div>
+    <div id="tab-related" class="tab-panel">
+      <div id="related-content"><div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="watchlist.html">Watchlist</a></li>
+  </ul>
+  <p class="footer-copy">Data from Jikan & AniList · AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const malId  = params.get('id');
+const alId   = params.get('alid');
+let animeData = null;
+
+async function loadDetail() {
+  if (malId) {
+    await loadFromJikan(malId);
+  } else if (alId) {
+    await loadFromAniList(alId);
+  }
+  initTabs(document.getElementById('detail-tabs'));
+}
+
+async function loadFromJikan(id) {
+  const [detailRes, charsRes, epsRes, recRes] = await Promise.all([
+    Jikan.getAnime(id),
+    Jikan.getCharacters(id),
+    Jikan.getEpisodes(id),
+    Jikan.getRecommendations(id)
+  ]);
+  const a = detailRes?.data;
+  if (!a) { document.getElementById('detail-hero-area').innerHTML = '<div class="section"><p style="color:var(--text-dim)">Anime not found.</p></div>'; return; }
+  animeData = a;
+  document.title = `${a.title_english || a.title} — AnimeGrid`;
+  renderHero(a);
+  renderOverview(a);
+  renderCharacters(charsRes?.data || []);
+  renderEpisodes(epsRes?.data || [], a.episodes);
+  renderRecommendations(recRes?.data || []);
+  renderRelated(a.relations || []);
+}
+
+async function loadFromAniList(id) {
+  const res = await AniList.getAnime(parseInt(id));
+  const m = res?.data?.Media;
+  if (!m) { document.getElementById('detail-hero-area').innerHTML = '<div class="section"><p style="color:var(--text-dim)">Anime not found.</p></div>'; return; }
+  document.title = `${m.title?.english || m.title?.romaji} — AnimeGrid`;
+  const mapped = {
+    mal_id: null,
+    title_english: m.title?.english,
+    title: m.title?.romaji,
+    title_japanese: m.title?.native,
+    synopsis: m.description?.replace(/<[^>]+>/g,''),
+    images: { jpg: { large_image_url: m.coverImage?.extraLarge } },
+    bannerImage: m.bannerImage,
+    score: m.averageScore ? m.averageScore / 10 : null,
+    scored_by: m.popularity,
+    popularity: m.popularity,
+    episodes: m.episodes,
+    duration: m.duration,
+    status: m.status,
+    year: m.seasonYear,
+    season: m.season,
+    genres: m.genres?.map(g => ({ name: g })) || [],
+    studios: { nodes: m.studios?.nodes || [] },
+    trailer: m.trailer?.id ? { youtube_id: m.trailer.id } : null,
+    nextAiringEpisode: m.nextAiringEpisode,
+    characters_al: m.characters?.edges || [],
+    recommendations_al: m.recommendations?.nodes || [],
+    relations_al: m.relations?.edges || []
+  };
+  animeData = mapped;
+  renderHero(mapped, true);
+  renderOverview(mapped, true);
+  if (mapped.characters_al.length) renderCharactersAL(mapped.characters_al);
+  else document.getElementById('chars-content').innerHTML = '<p style="color:var(--text-dim)">No characters available.</p>';
+  document.getElementById('eps-content').innerHTML = '<p style="color:var(--text-dim)">Episodes not available via AniList direct link. <a href="search.html" style="color:var(--neon-cyan)">Search on Jikan</a></p>';
+  if (mapped.recommendations_al.length) renderRecommendationsAL(mapped.recommendations_al);
+  else document.getElementById('rec-content').innerHTML = '<p style="color:var(--text-dim)">No recommendations found.</p>';
+  renderRelatedAL(mapped.relations_al);
+}
+
+function renderHero(a, isAL = false) {
+  const poster = a.images?.jpg?.large_image_url || 'https://via.placeholder.com/225x320/0a1628/00f5ff?text=No+Image';
+  const banner = a.bannerImage || poster;
+  const title  = a.title_english || a.title || 'Unknown';
+  const score  = a.score ? a.score.toFixed(1) : 'N/A';
+  const inWL   = malId && UserState.isInWatchlist(parseInt(malId));
+
+  document.getElementById('detail-hero-area').innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-hero-bg" style="background-image:url('${banner}')"></div>
+      <div class="detail-hero-content" style="padding-top:5rem">
+        <img class="detail-poster" src="${poster}" alt="${title}" onerror="this.src='https://via.placeholder.com/180x260/0a1628/00f5ff?text=No+Image'">
+        <div class="detail-info">
+          <h1>${title}</h1>
+          ${a.title_japanese ? `<div class="jp-title">${a.title_japanese}</div>` : ''}
+          <div class="detail-meta-row">
+            ${score !== 'N/A' ? `<span class="score-badge ${scoreClass(parseFloat(score))}">★ ${score}</span>` : ''}
+            ${a.type ? `<span class="detail-meta-tag">${a.type}</span>` : ''}
+            ${a.episodes ? `<span class="detail-meta-tag">${a.episodes} Episodes</span>` : ''}
+            ${a.status ? `<span class="detail-meta-tag">${a.status}</span>` : ''}
+            ${a.year ? `<span class="detail-meta-tag">${a.season || ''} ${a.year}</span>` : ''}
+            ${a.duration ? `<span class="detail-meta-tag">${a.duration} min/ep</span>` : ''}
+          </div>
+          <div class="genre-chips mb-2">
+            ${(a.genres||[]).map(g=>`<span class="genre-chip">${g.name || g}</span>`).join('')}
+          </div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem">
+            ${malId ? `<button class="btn ${inWL ? 'btn-pink' : 'btn-primary'}" id="wl-btn" onclick="toggleWatchlist()">
+              ${inWL ? '✓ In Watchlist' : '+ Add to Watchlist'}
+            </button>` : ''}
+            ${a.trailer?.youtube_id ? `<a href="https://youtube.com/watch?v=${a.trailer.youtube_id}" target="_blank" class="btn btn-ghost">▶ Trailer</a>` : ''}
+          </div>
+          ${a.nextAiringEpisode ? `<div style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,245,255,0.08);border-radius:8px;border-left:3px solid var(--neon-cyan);font-size:0.875rem">
+            📡 Next: Episode ${a.nextAiringEpisode.episode} in <strong style="color:var(--neon-cyan)">${countdownTo(a.nextAiringEpisode.airingAt)}</strong>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleWatchlist() {
+  if (!malId || !animeData) return;
+  const btn = document.getElementById('wl-btn');
+  const inWL = UserState.isInWatchlist(parseInt(malId));
+  if (inWL) {
+    UserState.removeFromWatchlist(parseInt(malId));
+    btn.textContent = '+ Add to Watchlist';
+    btn.className = 'btn btn-primary';
+    showToast('Removed from watchlist', 'error');
+  } else {
+    UserState.addToWatchlist({ mal_id: parseInt(malId), title: animeData.title_english || animeData.title, images: animeData.images, score: animeData.score, type: animeData.type });
+    btn.textContent = '✓ In Watchlist';
+    btn.className = 'btn btn-pink';
+  }
+}
+
+function renderOverview(a, isAL = false) {
+  const studio = isAL
+    ? (a.studios?.nodes?.[0]?.name || 'Unknown')
+    : (a.studios?.data?.[0]?.name || 'Unknown');
+  document.getElementById('overview-content').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;flex-wrap:wrap">
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:0.75rem;color:var(--neon-cyan)">Synopsis</h3>
+        <p style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem">${a.synopsis || 'No synopsis available.'}</p>
+      </div>
+      <div style="min-width:200px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:1.25rem;flex-shrink:0">
+        <h3 style="font-family:var(--font-display);font-size:0.875rem;margin-bottom:1rem;color:var(--neon-cyan)">INFO</h3>
+        ${infoRow('Studio', studio)}
+        ${infoRow('Type', a.type || 'Anime')}
+        ${infoRow('Episodes', a.episodes || '?')}
+        ${infoRow('Status', a.status || '?')}
+        ${infoRow('Year', a.year || '?')}
+        ${infoRow('Score', a.score ? `★ ${a.score.toFixed ? a.score.toFixed(1) : a.score}` : 'N/A')}
+        ${infoRow('Popularity', a.popularity ? `#${a.popularity}` : 'N/A')}
+      </div>
+    </div>`;
+}
+
+function infoRow(label, value) {
+  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border-subtle);font-size:0.82rem">
+    <span style="color:var(--text-dim)">${label}</span>
+    <span style="font-weight:600">${value}</span>
+  </div>`;
+}
+
+function renderCharacters(chars) {
+  if (!chars.length) { document.getElementById('chars-content').innerHTML = '<p style="color:var(--text-dim)">No characters found.</p>'; return; }
+  document.getElementById('chars-content').innerHTML = `
+    <div class="char-grid">
+      ${chars.slice(0,24).map(c => {
+        const ch = c.character;
+        const va = c.voice_actors?.find(v => v.language === 'Japanese')?.person;
+        return `<div class="char-card">
+          <img src="${ch.images?.jpg?.image_url || 'https://via.placeholder.com/100x100/0a1628/00f5ff?text=?'}" alt="${ch.name}" onerror="this.src='https://via.placeholder.com/100x100/0a1628/00f5ff?text=?'">
+          <div class="char-name">${ch.name}</div>
+          <div class="char-role">${c.role}</div>
+          ${va ? `<div class="char-role" style="color:var(--neon-violet)">CV: ${va.name}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderCharactersAL(edges) {
+  document.getElementById('chars-content').innerHTML = `
+    <div class="char-grid">
+      ${edges.slice(0,24).map(e => {
+        const ch = e.node;
+        return `<div class="char-card">
+          <img src="${ch.image?.large || 'https://via.placeholder.com/100x100/0a1628/00f5ff?text=?'}" alt="${ch.name?.full}" onerror="this.src='https://via.placeholder.com/100x100/0a1628/00f5ff?text=?'">
+          <div class="char-name">${ch.name?.full || 'Unknown'}</div>
+          <div class="char-role">${e.role}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderEpisodes(eps, total) {
+  if (!eps.length) { document.getElementById('eps-content').innerHTML = '<p style="color:var(--text-dim)">No episodes data.</p>'; return; }
+  const watched = malId ? (UserState.getWatched()[malId] || []) : [];
+  document.getElementById('eps-content').innerHTML = `
+    <p style="color:var(--text-secondary);margin-bottom:1rem;font-size:0.875rem">${eps.length} of ${total || '?'} episodes loaded</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.75rem">
+      ${eps.map(ep => {
+        const isWatched = watched.includes(ep.mal_id);
+        return `<div style="background:var(--bg-card);border:1px solid ${ep.filler ? 'rgba(255,0,128,0.2)' : 'var(--border-subtle)'};border-radius:10px;padding:0.875rem;display:flex;align-items:center;gap:0.75rem;cursor:pointer;transition:var(--transition)" onclick="toggleEp(${ep.mal_id},this)" id="ep-${ep.mal_id}">
+          <div style="font-family:var(--font-display);font-size:0.9rem;font-weight:700;color:${isWatched ? 'var(--neon-green)' : 'var(--neon-cyan)'};flex-shrink:0">${String(ep.mal_id).padStart(2,'0')}</div>
+          <div style="flex:1">
+            <div style="font-size:0.85rem;font-weight:600">${ep.title || `Episode ${ep.mal_id}`}</div>
+            <div style="font-size:0.75rem;color:var(--text-dim)">${ep.filler ? '⚠️ Filler' : '✓ Canon'} ${ep.aired || ''}</div>
+          </div>
+          <div style="font-size:1.1rem">${isWatched ? '✅' : '⬜'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function toggleEp(epNum, el) {
+  if (!malId) return;
+  UserState.markEpisode(malId, epNum);
+  el.querySelector('div:last-child').textContent = '✅';
+  el.style.borderColor = 'var(--neon-green)';
+  el.querySelector('[style*="font-family"]').style.color = 'var(--neon-green)';
+}
+
+function renderRecommendations(recs) {
+  if (!recs.length) { document.getElementById('rec-content').innerHTML = '<p style="color:var(--text-dim)">No recommendations.</p>'; return; }
+  document.getElementById('rec-content').innerHTML = `<div class="anime-grid">${recs.slice(0,12).map(r => animeCardHTML(r.entry)).join('')}</div>`;
+}
+
+function renderRecommendationsAL(nodes) {
+  const valid = nodes.filter(n => n.mediaRecommendation);
+  if (!valid.length) { document.getElementById('rec-content').innerHTML = '<p style="color:var(--text-dim)">No recommendations.</p>'; return; }
+  document.getElementById('rec-content').innerHTML = `<div class="anime-grid">${valid.slice(0,12).map(n => anilistCardHTML(n.mediaRecommendation)).join('')}</div>`;
+}
+
+function renderRelated(relations) {
+  if (!relations.length) { document.getElementById('related-content').innerHTML = '<p style="color:var(--text-dim)">No relations found.</p>'; return; }
+  document.getElementById('related-content').innerHTML = `
+    <div style="display:grid;gap:0.75rem">
+      ${relations.map(r => `
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:1rem">
+          <span style="padding:0.2rem 0.6rem;background:rgba(139,92,246,0.15);color:var(--neon-violet);border-radius:4px;font-size:0.75rem;font-weight:700;flex-shrink:0">${r.relation}</span>
+          <a href="detail.html?id=${r.entry[0]?.mal_id}" style="color:var(--text-primary);text-decoration:none;font-weight:600;font-size:0.9rem">${r.entry[0]?.name || 'Unknown'}</a>
+          <span style="font-size:0.78rem;color:var(--text-dim);margin-left:auto">${r.entry[0]?.type || ''}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderRelatedAL(edges) {
+  if (!edges.length) { document.getElementById('related-content').innerHTML = '<p style="color:var(--text-dim)">No relations found.</p>'; return; }
+  document.getElementById('related-content').innerHTML = `
+    <div style="display:grid;gap:0.75rem">
+      ${edges.map(e => `
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:1rem">
+          <span style="padding:0.2rem 0.6rem;background:rgba(139,92,246,0.15);color:var(--neon-violet);border-radius:4px;font-size:0.75rem;font-weight:700;flex-shrink:0">${e.relationType}</span>
+          <a href="detail.html?alid=${e.node.id}" style="color:var(--text-primary);text-decoration:none;font-weight:600;font-size:0.9rem">${e.node.title?.romaji || 'Unknown'}</a>
+          <span style="font-size:0.78rem;color:var(--text-dim);margin-left:auto">${e.node.type || ''}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+loadDetail();
+</script>
+</body>
+</html>

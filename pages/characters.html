@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Characters — AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="manga.html">Manga</a></li>
+    <li><a href="characters.html" class="active">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="section">
+    <h1 style="font-family:var(--font-display);font-size:2rem;font-weight:900;margin-bottom:0.5rem">👤 Characters <span class="text-pink">& VAs</span></h1>
+    <p style="color:var(--text-secondary);margin-bottom:2rem">Search characters and voice actors across thousands of anime</p>
+
+    <!-- SEARCH -->
+    <div style="display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem">
+        <span>🔍</span>
+        <input id="char-search" type="text" placeholder="Search character or voice actor..." style="background:none;border:none;outline:none;color:var(--text-primary);font-family:var(--font-body);font-size:0.95rem;flex:1">
+      </div>
+      <select id="char-type" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem;color:var(--text-primary);font-family:var(--font-body);cursor:pointer;outline:none">
+        <option value="character">Character</option>
+        <option value="person">Voice Actor</option>
+      </select>
+      <button class="btn btn-primary" onclick="searchChars()">Search</button>
+    </div>
+
+    <!-- TOP CHARS -->
+    <div id="top-chars-section">
+      <div class="section-header"><h2 class="section-title">🏆 Most Popular Characters</h2></div>
+      <div id="top-chars-grid" class="char-grid"></div>
+    </div>
+
+    <!-- SEARCH RESULTS -->
+    <div id="char-results-section" style="display:none;margin-top:2rem">
+      <div class="section-header">
+        <h2 class="section-title" id="char-results-title">Results</h2>
+        <button class="btn btn-ghost btn-sm" onclick="showTop()">← Back</button>
+      </div>
+      <div id="char-results-grid"></div>
+    </div>
+
+    <!-- CHARACTER DETAIL MODAL -->
+    <div class="modal-backdrop" id="char-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-char-name" style="font-family:var(--font-display);font-size:1.1rem"></h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modal-char-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links"><li><a href="../index.html">Home</a></li><li><a href="search.html">Browse</a></li></ul>
+  <p class="footer-copy">Data from Jikan · AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+async function loadTopChars() {
+  const grid = document.getElementById('top-chars-grid');
+  grid.innerHTML = createLoader();
+  const data = await jikanFetch('/top/characters?limit=30');
+  if (!data?.data) { grid.innerHTML = '<p style="color:var(--text-dim)">Failed to load.</p>'; return; }
+  grid.innerHTML = data.data.map(c => `
+    <div class="char-card" onclick="openCharModal(${c.mal_id},'${c.name.replace(/'/g,"\\'")}','${c.images?.jpg?.image_url||''}')">
+      <img src="${c.images?.jpg?.image_url || 'https://via.placeholder.com/100/0a1628/ff0080?text=?'}" alt="${c.name}"
+        onerror="this.src='https://via.placeholder.com/100/0a1628/ff0080?text=?'">
+      <div class="char-name">${c.name}</div>
+      <div class="char-role" style="color:var(--neon-amber)">♥ ${(c.favorites||0).toLocaleString()}</div>
+    </div>`).join('');
+}
+
+async function searchChars() {
+  const q = document.getElementById('char-search').value.trim();
+  const type = document.getElementById('char-type').value;
+  if (!q) return;
+  document.getElementById('top-chars-section').style.display = 'none';
+  document.getElementById('char-results-section').style.display = '';
+  document.getElementById('char-results-title').textContent = `Results for "${q}"`;
+  const grid = document.getElementById('char-results-grid');
+  grid.innerHTML = createLoader();
+
+  const endpoint = type === 'character'
+    ? `/characters?q=${encodeURIComponent(q)}&limit=24`
+    : `/people?q=${encodeURIComponent(q)}&limit=24`;
+  const data = await jikanFetch(endpoint);
+
+  if (!data?.data?.length) { grid.innerHTML = '<p style="color:var(--text-dim)">No results found.</p>'; return; }
+
+  if (type === 'character') {
+    grid.className = 'char-grid';
+    grid.innerHTML = data.data.map(c => `
+      <div class="char-card" onclick="openCharModal(${c.mal_id},'${c.name.replace(/'/g,"\\'")}','${c.images?.jpg?.image_url||''}')">
+        <img src="${c.images?.jpg?.image_url || 'https://via.placeholder.com/100/0a1628/ff0080?text=?'}" alt="${c.name}"
+          onerror="this.src='https://via.placeholder.com/100/0a1628/ff0080?text=?'">
+        <div class="char-name">${c.name}</div>
+        <div class="char-role">${(c.nicknames||[]).slice(0,1).join('')}</div>
+      </div>`).join('');
+  } else {
+    // Voice actors
+    grid.className = '';
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(260px,1fr))';
+    grid.style.gap = '1rem';
+    grid.innerHTML = data.data.map(p => `
+      <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-card);padding:1rem;display:flex;gap:1rem;align-items:center">
+        <img src="${p.images?.jpg?.image_url || 'https://via.placeholder.com/60/0a1628/8b5cf6?text=?'}" alt="${p.name}"
+          style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--neon-violet)"
+          onerror="this.src='https://via.placeholder.com/60/0a1628/8b5cf6?text=?'">
+        <div>
+          <div style="font-weight:700;margin-bottom:0.25rem">${p.name}</div>
+          <div style="font-size:0.78rem;color:var(--text-secondary)">${p.birthday || ''}</div>
+          <div style="font-size:0.78rem;color:var(--neon-violet)">♥ ${(p.favorites||0).toLocaleString()} favorites</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+async function openCharModal(id, name, img) {
+  document.getElementById('modal-char-name').textContent = name;
+  document.getElementById('modal-char-body').innerHTML = createLoader();
+  document.getElementById('char-modal').classList.add('open');
+
+  const data = await jikanFetch(`/characters/${id}/full`);
+  const c = data?.data;
+  if (!c) { document.getElementById('modal-char-body').innerHTML = '<p>Failed to load.</p>'; return; }
+
+  const vas = c.voices?.slice(0,4) || [];
+  document.getElementById('modal-char-body').innerHTML = `
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+      <img src="${c.images?.jpg?.image_url || img}" style="width:120px;height:170px;object-fit:cover;border-radius:10px;border:2px solid var(--neon-pink)" onerror="this.src='https://via.placeholder.com/120x170/0a1628/ff0080?text=?'">
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:var(--font-jp);color:var(--text-secondary);margin-bottom:0.5rem">${c.name_kanji || ''}</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:1rem;max-height:120px;overflow-y:auto">${c.about?.slice(0,400) || 'No description.'}${c.about?.length > 400 ? '...' : ''}</div>
+        <div style="font-family:var(--font-display);font-size:0.75rem;color:var(--neon-amber)">♥ ${(c.favorites||0).toLocaleString()} favorites</div>
+      </div>
+    </div>
+    ${vas.length ? `
+    <div style="margin-top:1.5rem">
+      <h4 style="font-family:var(--font-display);font-size:0.875rem;margin-bottom:0.75rem;color:var(--neon-violet)">VOICE ACTORS</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem">
+        ${vas.map(v => `
+          <div style="display:flex;gap:0.75rem;align-items:center;background:var(--bg-deep);border-radius:8px;padding:0.6rem">
+            <img src="${v.person?.images?.jpg?.image_url||''}" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+            <div>
+              <div style="font-size:0.82rem;font-weight:600">${v.person?.name||'?'}</div>
+              <div style="font-size:0.72rem;color:var(--text-dim)">${v.language||''}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+    ${c.anime?.length ? `
+    <div style="margin-top:1.5rem">
+      <h4 style="font-family:var(--font-display);font-size:0.875rem;margin-bottom:0.75rem;color:var(--neon-cyan)">APPEARS IN</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+        ${c.anime.slice(0,6).map(a => `<a href="detail.html?id=${a.anime?.mal_id}" style="padding:0.25rem 0.75rem;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);border-radius:var(--radius-pill);font-size:0.78rem;color:var(--neon-cyan);text-decoration:none">${a.anime?.title||'?'}</a>`).join('')}
+      </div>
+    </div>` : ''}`;
+}
+
+function closeModal() {
+  document.getElementById('char-modal').classList.remove('open');
+}
+
+document.getElementById('char-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('char-modal')) closeModal();
+});
+
+function showTop() {
+  document.getElementById('top-chars-section').style.display = '';
+  document.getElementById('char-results-section').style.display = 'none';
+}
+
+document.getElementById('char-search').addEventListener('keydown', e => { if (e.key === 'Enter') searchChars(); });
+
+loadTopChars();
+</script>
+</body>
+</html>

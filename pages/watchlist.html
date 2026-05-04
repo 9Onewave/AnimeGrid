@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Watchlist — AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="manga.html">Manga</a></li>
+    <li><a href="characters.html">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="watchlist.html" class="active">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="section">
+    <h1 style="font-family:var(--font-display);font-size:2rem;font-weight:900;margin-bottom:0.5rem">📋 My <span class="text-cyan">Watchlist</span></h1>
+    <p style="color:var(--text-secondary);margin-bottom:2rem">Your saved anime — all stored locally, no login needed</p>
+
+    <div id="watchlist-empty" style="display:none;text-align:center;padding:4rem 2rem">
+      <div style="font-size:4rem;margin-bottom:1rem">📭</div>
+      <h3 style="font-family:var(--font-display);font-size:1.2rem;margin-bottom:0.5rem">Your watchlist is empty</h3>
+      <p style="color:var(--text-secondary);margin-bottom:1.5rem">Start exploring and add anime to your list!</p>
+      <a href="search.html" class="btn btn-primary">🔥 Browse Anime</a>
+    </div>
+
+    <div id="watchlist-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:2rem"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
+      <div id="wl-count" style="color:var(--text-secondary);font-size:0.875rem"></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()" style="color:var(--neon-pink);border-color:rgba(255,0,128,0.3)">🗑 Clear All</button>
+    </div>
+
+    <div id="watchlist-grid" class="anime-grid"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links"><li><a href="../index.html">Home</a></li><li><a href="search.html">Browse</a></li><li><a href="explore.html">Explore</a></li></ul>
+  <p class="footer-copy">AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+function renderWatchlist() {
+  const list = UserState.getWatchlist();
+  const grid = document.getElementById('watchlist-grid');
+  const empty = document.getElementById('watchlist-empty');
+  const count = document.getElementById('wl-count');
+  const stats = document.getElementById('watchlist-stats');
+
+  if (!list.length) { empty.style.display = ''; grid.style.display = 'none'; stats.style.display = 'none'; return; }
+  empty.style.display = 'none'; grid.style.display = ''; stats.style.display = '';
+  count.textContent = `${list.length} anime saved`;
+
+  const avgScore = list.filter(a => a.score).reduce((sum,a) => sum + a.score, 0) / list.filter(a=>a.score).length;
+  stats.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:900;color:var(--neon-cyan)">${list.length}</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">Saved</div>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:1.25rem;text-align:center">
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:900;color:var(--neon-amber)">${avgScore ? avgScore.toFixed(1) : 'N/A'}</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">Avg Score</div>
+    </div>`;
+
+  grid.innerHTML = list.map(a => {
+    const img = a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || 'https://via.placeholder.com/225x320/0a1628/00f5ff?text=No+Image';
+    const title = a.title || 'Unknown';
+    return `
+      <div style="position:relative">
+        <a class="anime-card" href="detail.html?id=${a.mal_id}" style="display:block;text-decoration:none;color:inherit">
+          <img class="anime-card-img" src="${img}" alt="${title}" loading="lazy">
+          <div class="anime-card-info">
+            <div class="anime-card-title">${title}</div>
+            <div class="anime-card-meta">
+              ${a.score ? `<span class="anime-card-score">★ ${a.score.toFixed ? a.score.toFixed(1) : a.score}</span>` : ''}
+              <span>${a.type || ''}</span>
+            </div>
+          </div>
+        </a>
+        <button onclick="removeItem(${a.mal_id})" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,0,128,0.8);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function removeItem(id) {
+  UserState.removeFromWatchlist(id);
+  showToast('Removed from watchlist', 'error');
+  renderWatchlist();
+}
+
+function clearAll() {
+  if (!confirm('Clear your entire watchlist?')) return;
+  const state = UserState.get();
+  state.watchlist = [];
+  UserState.save(state);
+  updateWatchlistCount();
+  renderWatchlist();
+  showToast('Watchlist cleared', 'error');
+}
+
+renderWatchlist();
+</script>
+</body>
+</html>

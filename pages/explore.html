@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore — AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .swipe-card { user-select: none; touch-action: none; }
+    .swipe-card.dragging { transition: none !important; }
+    .hint-left  { position:absolute;top:1rem;left:1rem;background:rgba(255,0,128,0.8);color:#fff;padding:0.3rem 0.8rem;border-radius:6px;font-weight:900;font-size:1rem;opacity:0;transition:opacity 0.2s;z-index:10;pointer-events:none }
+    .hint-right { position:absolute;top:1rem;right:1rem;background:rgba(0,245,255,0.8);color:#000;padding:0.3rem 0.8rem;border-radius:6px;font-weight:900;font-size:1rem;opacity:0;transition:opacity 0.2s;z-index:10;pointer-events:none }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="manga.html">Manga</a></li>
+    <li><a href="characters.html">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html" class="active">Explore</a></li>
+    <li><a href="watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div style="max-width:500px;margin:0 auto;padding:2rem 1rem">
+    <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:900;text-align:center;margin-bottom:0.35rem">✨ Swipe & <span class="text-cyan">Discover</span></h1>
+    <p style="color:var(--text-secondary);text-align:center;font-size:0.875rem;margin-bottom:1.5rem">← Skip &nbsp;|&nbsp; Save → &nbsp;|&nbsp; ↑ Details</p>
+
+    <!-- FILTER MOOD -->
+    <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem">
+      <button class="genre-chip active" onclick="changeFeed('popular',this)">🔥 Popular</button>
+      <button class="genre-chip" onclick="changeFeed('airing',this)">📡 Airing</button>
+      <button class="genre-chip" onclick="changeFeed('action',this)">⚔️ Action</button>
+      <button class="genre-chip" onclick="changeFeed('romance',this)">💕 Romance</button>
+      <button class="genre-chip" onclick="changeFeed('comedy',this)">😂 Comedy</button>
+    </div>
+
+    <!-- CARD STACK -->
+    <div class="swipe-card-stack" id="card-stack" style="margin:0 auto">
+      <div id="loading-card" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border-radius:20px;border:1px solid var(--border-subtle)">
+        <div class="loader"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="swipe-actions" style="justify-content:center;margin-top:1.5rem">
+      <button class="swipe-btn skip" onclick="doSwipe('skip')" title="Skip">✕</button>
+      <button class="swipe-btn save" onclick="doSwipe('save')" title="Save to Watchlist">♥</button>
+      <button class="swipe-btn info" onclick="openInfo()" title="Details">ℹ</button>
+    </div>
+
+    <!-- COUNTER -->
+    <div style="text-align:center;margin-top:1rem;color:var(--text-dim);font-size:0.8rem">
+      Saved: <span id="saved-count" style="color:var(--neon-cyan);font-weight:700">0</span> anime this session
+    </div>
+
+    <!-- SAVED LIST -->
+    <div id="session-saved" style="margin-top:2rem"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links"><li><a href="../index.html">Home</a></li><li><a href="watchlist.html">Watchlist</a></li></ul>
+  <p class="footer-copy">AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+let queue = [];
+let currentIdx = 0;
+let savedCount = 0;
+let currentFeed = 'popular';
+let currentPage = 1;
+let isDragging = false;
+let startX = 0, startY = 0, currentX = 0;
+
+async function loadFeed() {
+  document.getElementById('loading-card').style.display = 'flex';
+  let data;
+  if (currentFeed === 'popular') data = await Jikan.topAnime(currentPage, 'bypopularity');
+  else if (currentFeed === 'airing') data = await Jikan.currentSeason();
+  else data = await Jikan.search(currentFeed, '', '', currentPage);
+  queue = [...queue, ...(data?.data || [])];
+  document.getElementById('loading-card').style.display = 'none';
+  renderCard();
+}
+
+function renderCard() {
+  const stack = document.getElementById('card-stack');
+  // Remove old cards
+  stack.querySelectorAll('.swipe-card').forEach(c => c.remove());
+
+  // Show up to 3 cards stacked
+  for (let i = Math.min(2, queue.length - currentIdx - 1); i >= 0; i--) {
+    const anime = queue[currentIdx + i];
+    if (!anime) continue;
+    const card = buildCard(anime, i === 0);
+    stack.appendChild(card);
+    if (i === 0) attachDrag(card, anime);
+  }
+
+  if (currentIdx >= queue.length - 3) {
+    currentPage++;
+    loadFeed();
+  }
+}
+
+function buildCard(anime, isTop) {
+  const img = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || '';
+  const title = anime.title_english || anime.title || 'Unknown';
+  const score = formatJikanScore(anime.score);
+  const genres = (anime.genres||[]).slice(0,3).map(g=>g.name).join(' · ');
+
+  const card = document.createElement('div');
+  card.className = 'swipe-card';
+  card.style.cssText = `
+    position:absolute;inset:0;border-radius:20px;overflow:hidden;
+    border:1px solid var(--border-subtle);
+    transform:scale(${isTop ? 1 : 0.95}) translateY(${isTop ? 0 : 12}px);
+    transition:transform 0.3s ease;
+    box-shadow:var(--shadow-card);
+    background:var(--bg-card);
+  `;
+  card.innerHTML = `
+    <div class="hint-left">SKIP</div>
+    <div class="hint-right">SAVE ♥</div>
+    <img src="${img}" alt="${title}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='https://via.placeholder.com/320x450/0a1628/00f5ff?text=No+Image'">
+    <div class="swipe-card-info">
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.35rem">${genres}</div>
+      <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;line-height:1.2">${title}</div>
+      <div style="margin-top:0.4rem;font-size:0.875rem;color:var(--neon-amber)">★ ${score} &nbsp;·&nbsp; ${anime.type||'Anime'} &nbsp;·&nbsp; ${anime.year||''}</div>
+    </div>`;
+  return card;
+}
+
+function attachDrag(card, anime) {
+  let startX = 0, currentX = 0;
+
+  function onStart(e) {
+    isDragging = true;
+    card.classList.add('dragging');
+    startX = (e.touches ? e.touches[0].clientX : e.clientX);
+  }
+  function onMove(e) {
+    if (!isDragging) return;
+    currentX = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+    const rotate = currentX * 0.08;
+    card.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+    const threshold = 60;
+    card.querySelector('.hint-left').style.opacity  = currentX < -threshold ? '1' : '0';
+    card.querySelector('.hint-right').style.opacity = currentX > threshold  ? '1' : '0';
+  }
+  function onEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    card.classList.remove('dragging');
+    if (currentX > 100)       animateOut(card, 'right', anime);
+    else if (currentX < -100) animateOut(card, 'left',  anime);
+    else { card.style.transform = 'scale(1) translateY(0)'; card.style.transition = 'transform 0.3s ease'; }
+    currentX = 0;
+  }
+
+  card.addEventListener('mousedown', onStart);
+  card.addEventListener('mousemove', onMove);
+  card.addEventListener('mouseup', onEnd);
+  card.addEventListener('touchstart', onStart, { passive: true });
+  card.addEventListener('touchmove', onMove, { passive: true });
+  card.addEventListener('touchend', onEnd);
+}
+
+function animateOut(card, direction, anime) {
+  const x = direction === 'right' ? 600 : -600;
+  card.style.transition = 'transform 0.35s ease, opacity 0.35s ease';
+  card.style.transform = `translateX(${x}px) rotate(${direction === 'right' ? 30 : -30}deg)`;
+  card.style.opacity = '0';
+  if (direction === 'right') {
+    UserState.addToWatchlist({ mal_id: anime.mal_id, title: anime.title_english || anime.title, images: anime.images, score: anime.score, type: anime.type });
+    savedCount++;
+    document.getElementById('saved-count').textContent = savedCount;
+    addToSessionList(anime);
+  }
+  setTimeout(() => { card.remove(); currentIdx++; renderCard(); }, 350);
+}
+
+function doSwipe(action) {
+  const card = document.querySelector('#card-stack .swipe-card:last-child');
+  if (!card) return;
+  const anime = queue[currentIdx];
+  if (action === 'save') animateOut(card, 'right', anime);
+  else animateOut(card, 'left', anime);
+}
+
+function openInfo() {
+  const anime = queue[currentIdx];
+  if (!anime) return;
+  window.open(`detail.html?id=${anime.mal_id}`, '_blank');
+}
+
+function addToSessionList(anime) {
+  const container = document.getElementById('session-saved');
+  if (!container.querySelector('h3')) {
+    container.innerHTML = `<h3 style="font-family:var(--font-display);font-size:0.875rem;margin-bottom:0.75rem;color:var(--neon-cyan)">✓ SAVED THIS SESSION</h3><div id="saved-items" style="display:grid;gap:0.5rem"></div>`;
+  }
+  const img = anime.images?.jpg?.image_url || '';
+  const title = anime.title_english || anime.title;
+  document.getElementById('saved-items').innerHTML += `
+    <a class="anime-card-wide" href="detail.html?id=${anime.mal_id}">
+      <img src="${img}" alt="${title}">
+      <div class="anime-card-wide-info">
+        <div class="anime-card-wide-title">${title}</div>
+        <div class="anime-card-wide-meta">★ ${formatJikanScore(anime.score)} · ${anime.type||''}</div>
+      </div>
+    </a>`;
+}
+
+function changeFeed(feed, el) {
+  currentFeed = feed;
+  currentPage = 1;
+  queue = [];
+  currentIdx = 0;
+  document.querySelectorAll('.genre-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  loadFeed();
+}
+
+loadFeed();
+</script>
+</body>
+</html>

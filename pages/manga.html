@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manga - AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html">Browse</a></li>
+    <li><a href="manga.html" class="active">Manga</a></li>
+    <li><a href="characters.html">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="section">
+    <h1 style="font-family:var(--font-display);font-size:2rem;font-weight:900;margin-bottom:0.5rem">📚 Manga <span class="text-cyan">Library</span></h1>
+    <p style="color:var(--text-secondary);margin-bottom:2rem">Top manga, manhwa & manhua — discover what to read next</p>
+
+    <!-- SEARCH -->
+    <div style="display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem">
+        <span>🔍</span>
+        <input id="manga-search-input" type="text" placeholder="Search manga title..." style="background:none;border:none;outline:none;color:var(--text-primary);font-family:var(--font-body);font-size:0.95rem;flex:1">
+      </div>
+      <button class="btn btn-primary" onclick="searchManga()">Search</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs" id="manga-tabs" data-tabs>
+      <button class="tab-btn active" data-tab="tab-top-manga">🏆 Top Manga</button>
+      <button class="tab-btn" data-tab="tab-top-manhua">📖 Manhwa/Manhua</button>
+      <button class="tab-btn" data-tab="tab-search-manga">🔎 Search Results</button>
+    </div>
+
+    <div id="tab-top-manga" class="tab-panel active">
+      <div id="top-manga-grid" class="anime-grid"></div>
+    </div>
+    <div id="tab-top-manhua" class="tab-panel">
+      <div id="manhua-grid" class="anime-grid"></div>
+    </div>
+    <div id="tab-search-manga" class="tab-panel">
+      <div id="manga-search-results" class="anime-grid"><p style="color:var(--text-dim)">Enter a title above to search.</p></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links"><li><a href="../index.html">Home</a></li><li><a href="search.html">Browse</a></li><li><a href="watchlist.html">Watchlist</a></li></ul>
+  <p class="footer-copy">Data from Jikan · AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+function mangaCardHTML(m) {
+  const img = m.images?.jpg?.large_image_url || m.images?.jpg?.image_url || 'https://via.placeholder.com/225x320/0a1628/ff0080?text=Manga';
+  const title = m.title_english || m.title || 'Unknown';
+  const score = m.score ? m.score.toFixed(1) : 'N/A';
+  return `
+    <a class="anime-card" href="https://myanimelist.net/manga/${m.mal_id}" target="_blank" rel="noopener">
+      <div class="anime-card-type-badge" style="background:rgba(255,0,128,0.8)">${m.type || 'Manga'}</div>
+      <img class="anime-card-img" src="${img}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/225x320/0a1628/ff0080?text=Manga'">
+      <div class="anime-card-overlay">
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.35rem">${(m.genres||[]).slice(0,2).map(g=>g.name).join(' · ')}</div>
+        <div style="font-weight:700;font-size:0.9rem">${title}</div>
+      </div>
+      <div class="anime-card-info">
+        <div class="anime-card-title">${title}</div>
+        <div class="anime-card-meta">
+          ${score !== 'N/A' ? `<span class="anime-card-score">★ ${score}</span>` : ''}
+          <span>${m.chapters ? m.chapters + ' ch' : 'Ongoing'}</span>
+        </div>
+      </div>
+    </a>`;
+}
+
+async function loadTopManga() {
+  const grid = document.getElementById('top-manga-grid');
+  grid.innerHTML = createLoader();
+  const data = await Jikan.getTopManga();
+  if (!data?.data) { grid.innerHTML = '<p style="color:var(--text-dim)">Failed to load.</p>'; return; }
+  grid.innerHTML = data.data.map(m => mangaCardHTML(m)).join('');
+}
+
+async function loadManhua() {
+  const grid = document.getElementById('manhua-grid');
+  grid.innerHTML = createLoader();
+  const data = await jikanFetch('/top/manga?type=manhwa&limit=20');
+  if (!data?.data) { grid.innerHTML = '<p style="color:var(--text-dim)">Failed to load.</p>'; return; }
+  grid.innerHTML = data.data.map(m => mangaCardHTML(m)).join('');
+}
+
+async function searchManga() {
+  const q = document.getElementById('manga-search-input').value.trim();
+  if (!q) return;
+  const tabs = document.getElementById('manga-tabs');
+  tabs.querySelectorAll('.tab-btn')[2].click();
+  const grid = document.getElementById('manga-search-results');
+  grid.innerHTML = createLoader();
+  const data = await Jikan.searchManga(q);
+  if (!data?.data?.length) { grid.innerHTML = '<p style="color:var(--text-dim)">No results found.</p>'; return; }
+  grid.innerHTML = data.data.map(m => mangaCardHTML(m)).join('');
+}
+
+document.getElementById('manga-search-input').addEventListener('keydown', e => { if (e.key === 'Enter') searchManga(); });
+
+initTabs(document.getElementById('manga-tabs'));
+
+// Load tabs on click
+document.querySelectorAll('#manga-tabs .tab-btn').forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    if (i === 0) loadTopManga();
+    if (i === 1) loadManhua();
+  });
+});
+
+loadTopManga();
+</script>
+</body>
+</html>

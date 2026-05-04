@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Anime — AnimeGrid</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="../index.html" class="nav-logo">ANIME<span>Grid</span></a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="seasonal.html">Seasonal</a></li>
+    <li><a href="search.html" class="active">Browse</a></li>
+    <li><a href="manga.html">Manga</a></li>
+    <li><a href="characters.html">Characters</a></li>
+    <li><a href="scene.html">Scene Finder</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="section" style="padding-top:2rem">
+    <h1 style="font-family:var(--font-display);font-size:1.8rem;font-weight:900;margin-bottom:0.5rem">Browse <span class="text-cyan">Anime</span></h1>
+    <p style="color:var(--text-secondary);margin-bottom:2rem">Search, filter, and discover thousands of anime</p>
+
+    <!-- SEARCH BAR -->
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
+      <div style="flex:1;min-width:250px;display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem;transition:var(--transition)" id="big-search-box">
+        <span>🔍</span>
+        <input id="big-search" type="text" placeholder="Search anime title..." style="background:none;border:none;outline:none;color:var(--text-primary);font-family:var(--font-body);font-size:1rem;flex:1" autocomplete="off">
+      </div>
+      <select id="filter-type" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem;color:var(--text-primary);font-family:var(--font-body);cursor:pointer;outline:none">
+        <option value="">All Types</option>
+        <option value="tv">TV</option>
+        <option value="movie">Movie</option>
+        <option value="ova">OVA</option>
+        <option value="ona">ONA</option>
+        <option value="special">Special</option>
+      </select>
+      <select id="filter-sort" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);padding:0.6rem 1.25rem;color:var(--text-primary);font-family:var(--font-body);cursor:pointer;outline:none">
+        <option value="bypopularity">Most Popular</option>
+        <option value="score">Top Rated</option>
+        <option value="airing">Currently Airing</option>
+        <option value="upcoming">Upcoming</option>
+      </select>
+      <button class="btn btn-primary" onclick="doSearch(1)">Search</button>
+    </div>
+
+    <!-- GENRE FILTER -->
+    <div id="genre-filter-chips" class="genre-chips mb-2"></div>
+
+    <!-- RESULTS INFO -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;margin-top:1.5rem">
+      <div id="results-info" style="color:var(--text-secondary);font-size:0.875rem"></div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="setView('grid')" id="view-grid">⊞ Grid</button>
+        <button class="btn btn-ghost btn-sm" onclick="setView('list')" id="view-list">☰ List</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results-container" class="anime-grid"></div>
+
+    <!-- PAGINATION -->
+    <div id="pagination" style="display:flex;justify-content:center;gap:0.75rem;margin-top:2.5rem;flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <ul class="footer-links">
+    <li><a href="../index.html">Home</a></li><li><a href="seasonal.html">Seasonal</a></li><li><a href="watchlist.html">Watchlist</a></li>
+  </ul>
+  <p class="footer-copy">Data from Jikan · AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="../js/api.js"></script>
+<script>
+let currentPage = 1;
+let currentView = 'grid';
+let selectedGenre = '';
+let totalPages = 1;
+
+const params = new URLSearchParams(location.search);
+const initQuery = params.get('q') || '';
+const initSort  = params.get('sort') || '';
+
+if (initQuery) document.getElementById('big-search').value = initQuery;
+if (initSort === 'top') document.getElementById('filter-sort').value = 'score';
+
+document.getElementById('big-search-box').addEventListener('focusin', () => {
+  document.getElementById('big-search-box').style.borderColor = 'var(--neon-cyan)';
+});
+document.getElementById('big-search-box').addEventListener('focusout', () => {
+  document.getElementById('big-search-box').style.borderColor = 'var(--border-subtle)';
+});
+
+document.getElementById('big-search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch(1);
+});
+
+async function loadGenreChips() {
+  const data = await Jikan.getGenres();
+  if (!data?.data) return;
+  const chips = document.getElementById('genre-filter-chips');
+  chips.innerHTML = `<span class="genre-chip active" onclick="selectGenre('',this)">All</span>` +
+    data.data.filter(g => g.count > 300).slice(0, 20).map(g =>
+      `<span class="genre-chip" onclick="selectGenre('${g.mal_id}',this)">${g.name}</span>`
+    ).join('');
+}
+
+function selectGenre(id, el) {
+  selectedGenre = id;
+  document.querySelectorAll('#genre-filter-chips .genre-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  doSearch(1);
+}
+
+async function doSearch(page) {
+  currentPage = page;
+  const q = document.getElementById('big-search').value.trim();
+  const type = document.getElementById('filter-type').value;
+  const sort = document.getElementById('filter-sort').value;
+  const container = document.getElementById('results-container');
+  container.innerHTML = createLoader();
+  document.getElementById('results-info').textContent = 'Loading...';
+
+  let data;
+  if (q) {
+    data = await Jikan.search(q, selectedGenre, type, page);
+  } else {
+    // Browse top by filter
+    let url = `/top/anime?page=${page}&limit=20`;
+    if (sort) url += `&filter=${sort}`;
+    if (type) url += `&type=${type}`;
+    data = await jikanFetch(url);
+  }
+
+  if (!data?.data || !data.data.length) {
+    container.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:3rem">No results found. Try a different search.</p>';
+    document.getElementById('results-info').textContent = '0 results';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  totalPages = data.pagination?.last_visible_page || 1;
+  const total = data.pagination?.items?.total || data.data.length;
+  document.getElementById('results-info').textContent = `Showing ${data.data.length} of ${total} results`;
+
+  if (currentView === 'grid') {
+    container.className = 'anime-grid';
+    container.innerHTML = data.data.map(a => animeCardHTML(a)).join('');
+  } else {
+    container.className = '';
+    container.style.display = 'grid';
+    container.style.gap = '0.75rem';
+    container.innerHTML = data.data.map(a => {
+      const img = a.images?.jpg?.image_url || '';
+      return `<a class="anime-card-wide" href="detail.html?id=${a.mal_id}">
+        <img src="${img}" alt="${a.title}">
+        <div class="anime-card-wide-info">
+          <div class="anime-card-wide-title">${a.title_english || a.title}</div>
+          <div class="anime-card-wide-meta">${a.type || ''} · ${a.year || ''} · ★${formatJikanScore(a.score)} · ${a.episodes || '?'} eps</div>
+          <div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.25rem">${(a.genres||[]).map(g=>g.name).slice(0,4).join(', ')}</div>
+        </div>
+      </a>`;
+    }).join('');
+  }
+
+  renderPagination();
+}
+
+function setView(v) {
+  currentView = v;
+  doSearch(currentPage);
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  const pages = [];
+  const start = Math.max(1, currentPage - 2);
+  const end   = Math.min(totalPages, currentPage + 2);
+  if (currentPage > 1) pages.push({ label: '← Prev', page: currentPage - 1 });
+  for (let p = start; p <= end; p++) pages.push({ label: p, page: p, active: p === currentPage });
+  if (currentPage < totalPages) pages.push({ label: 'Next →', page: currentPage + 1 });
+  el.innerHTML = pages.map(p =>
+    `<button class="btn ${p.active ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="doSearch(${p.page})">${p.label}</button>`
+  ).join('');
+}
+
+loadGenreChips();
+doSearch(1);
+</script>
+</body>
+</html>

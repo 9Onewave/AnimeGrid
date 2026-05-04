@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnimieGrid - Your Ultimate Anime Universe</title>
+  <meta name="description" content="Explore anime, manga, characters, seasonal releases, scene finder and more.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">ANIME<span>GRID</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="pages/seasonal.html">Seasonal</a></li>
+    <li><a href="pages/search.html">Browse</a></li>
+    <li><a href="pages/manga.html">Manga</a></li>
+    <li><a href="pages/characters.html">Characters</a></li>
+    <li><a href="pages/scene.html">Scene Finder</a></li>
+    <li><a href="pages/explore.html">Explore</a></li>
+    <li><a href="pages/watchlist.html">Watchlist <span class="watchlist-count" style="display:none">0</span></a></li>
+  </ul>
+  <div class="nav-search" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input id="nav-search-input" type="text" placeholder="Search anime..." autocomplete="off">
+    <div id="nav-search-dropdown" class="search-dropdown" style="min-width:320px"></div>
+  </div>
+  <div class="nav-hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="page-wrapper">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge">⚡ Live · Updated Daily</div>
+      <h1>
+        Your Ultimate<br>
+        <span class="line-cyan">Anime</span>
+        <span class="line-pink"> Universe</span>
+      </h1>
+      <p class="hero-desc">
+        Discover thousands of anime, track your watchlist, find scenes from screenshots, explore by mood, and dive deep into characters, studios & more.
+      </p>
+      <div class="hero-actions">
+        <a href="pages/search.html" class="btn btn-primary">🔥 Start Exploring</a>
+        <a href="pages/explore.html" class="btn btn-ghost">✨ Swipe & Discover</a>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat-card float">
+        <div class="hero-stat-number">900+</div>
+        <div class="hero-stat-label">Studios</div>
+      </div>
+      <div class="hero-stat-card float" style="animation-delay:1s">
+        <div class="hero-stat-number">20K+</div>
+        <div class="hero-stat-label">Anime Titles</div>
+      </div>
+      <div class="hero-stat-card float" style="animation-delay:2s">
+        <div class="hero-stat-number">500K+</div>
+        <div class="hero-stat-label">Characters</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOOD PICKER -->
+  <section class="section" id="mood-section">
+    <div class="section-header">
+      <h2 class="section-title">🎭 Pick Your Mood</h2>
+      <span style="color:var(--text-dim);font-size:0.875rem">What do you feel like watching?</span>
+    </div>
+    <div class="mood-grid" id="mood-grid"></div>
+    <div id="mood-results" class="mt-3"></div>
+  </section>
+
+  <!-- TRENDING NOW -->
+  <section class="section" id="trending-section">
+    <div class="section-header">
+      <h2 class="section-title">🔥 Trending Now</h2>
+      <a href="pages/search.html?sort=trending" class="section-link">View All →</a>
+    </div>
+    <div id="trending-grid" class="anime-grid">
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </section>
+
+  <!-- AIRING THIS WEEK -->
+  <section class="section" style="background:linear-gradient(180deg,transparent,rgba(0,245,255,0.02),transparent)">
+    <div class="section-header">
+      <h2 class="section-title">📡 Airing This Week</h2>
+      <a href="pages/seasonal.html" class="section-link">Full Schedule →</a>
+    </div>
+    <div id="airing-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
+      <div class="skeleton" style="height:90px"></div>
+      <div class="skeleton" style="height:90px"></div>
+      <div class="skeleton" style="height:90px"></div>
+      <div class="skeleton" style="height:90px"></div>
+    </div>
+  </section>
+
+  <!-- TOP ALL TIME -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">🏆 Top All-Time</h2>
+      <a href="pages/search.html?sort=top" class="section-link">Full List →</a>
+    </div>
+    <div id="top-grid" class="anime-grid">
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </section>
+
+  <!-- QUICK ACTIONS -->
+  <section class="section">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem">
+      <a href="pages/scene.html" class="feature-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:1.75rem;display:block;text-decoration:none;color:inherit;transition:var(--transition);" onmouseover="this.style.borderColor='var(--neon-cyan)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.transform=''">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">🔍</div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--neon-cyan);margin-bottom:0.5rem">Scene Finder</div>
+        <div style="font-size:0.875rem;color:var(--text-secondary)">Upload an image to find the exact anime, episode & timestamp</div>
+      </a>
+      <a href="pages/explore.html" class="feature-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:1.75rem;display:block;text-decoration:none;color:inherit;transition:var(--transition);" onmouseover="this.style.borderColor='var(--neon-pink)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.transform=''">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">✨</div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--neon-pink);margin-bottom:0.5rem">Swipe & Discover</div>
+        <div style="font-size:0.875rem;color:var(--text-secondary)">Tinder-style anime discovery. Swipe right to save, left to skip.</div>
+      </a>
+      <a href="pages/seasonal.html" class="feature-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:1.75rem;display:block;text-decoration:none;color:inherit;transition:var(--transition);" onmouseover="this.style.borderColor='var(--neon-violet)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.transform=''">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">🗓️</div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--neon-violet);margin-bottom:0.5rem">Seasonal Guide</div>
+        <div style="font-size:0.875rem;color:var(--text-secondary)">Spring, Summer, Fall, Winter — track every season's lineup.</div>
+      </a>
+      <a href="pages/manga.html" class="feature-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:16px;padding:1.75rem;display:block;text-decoration:none;color:inherit;transition:var(--transition);" onmouseover="this.style.borderColor='var(--neon-amber)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.transform=''">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">📚</div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--neon-amber);margin-bottom:0.5rem">Manga Library</div>
+        <div style="font-size:0.875rem;color:var(--text-secondary)">Top manga, manhwa & manhua — all in one place.</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- QUOTE OF THE DAY -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">💬 Quote of the Day</h2>
+      <button id="new-quote-btn" class="btn btn-ghost btn-sm">New Quote ↺</button>
+    </div>
+    <div id="quote-container">
+      <div class="skeleton" style="height:120px"></div>
+    </div>
+  </section>
+
+  <!-- CURRENTLY AIRING (TOP) -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">📺 Currently Airing</h2>
+      <a href="pages/seasonal.html" class="section-link">See Schedule →</a>
+    </div>
+    <div id="airing-top-grid" class="anime-grid">
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </section>
+
+  <!-- GENRE EXPLORER -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">🎌 Browse by Genre</h2>
+    </div>
+    <div id="genre-chips-home" class="genre-chips mb-2"></div>
+    <div id="genre-results" class="anime-grid" style="margin-top:1.5rem"></div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">ANIME<span style="color:var(--neon-pink)">GRID</span></div>
+  <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem">Your ultimate anime universe — powered by Jikan & AniList</p>
+  <ul class="footer-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="pages/seasonal.html">Seasonal</a></li>
+    <li><a href="pages/search.html">Browse</a></li>
+    <li><a href="pages/manga.html">Manga</a></li>
+    <li><a href="pages/characters.html">Characters</a></li>
+    <li><a href="pages/scene.html">Scene Finder</a></li>
+    <li><a href="pages/explore.html">Explore</a></li>
+    <li><a href="pages/watchlist.html">Watchlist</a></li>
+  </ul>
+  <p class="footer-copy">Data from <a href="https://jikan.moe" style="color:var(--neon-cyan)">Jikan</a> & <a href="https://anilist.co" style="color:var(--neon-cyan)">AniList</a> · AnimeGrid © 2026</p>
+</footer>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="js/api.js"></script>
+<script>
+// ─── MOOD CONFIG ───────────────────────────────────────
+const MOODS = [
+  { emoji: '🔥', label: 'Hype',    color: '#f59e0b', genres: '1,2',   query: 'action'   },
+  { emoji: '😭', label: 'Emotional', color: '#00f5ff', genres: '8',  query: 'drama'    },
+  { emoji: '😂', label: 'Funny',   color: '#10b981', genres: '4',    query: 'comedy'   },
+  { emoji: '💕', label: 'Romance', color: '#ff0080', genres: '22',   query: 'romance'  },
+  { emoji: '🧠', label: 'Dark',    color: '#8b5cf6', genres: '7',    query: 'mystery'  },
+  { emoji: '🌸', label: 'Chill',   color: '#a78bfa', genres: '36',   query: 'slice of life' },
+  { emoji: '⚔️',  label: 'Epic',   color: '#f97316', genres: '1,24', query: 'fantasy'  },
+  { emoji: '🤖', label: 'Sci-Fi',  color: '#06b6d4', genres: '24',   query: 'mecha'    },
+];
+
+// ─── INIT ──────────────────────────────────────────────
+async function initHome() {
+  renderMoods();
+  loadTrending();
+  loadAiringSchedule();
+  loadTopAnime();
+  loadQuote();
+  loadCurrentlyAiring();
+  loadGenres();
+}
+
+function renderMoods() {
+  const grid = document.getElementById('mood-grid');
+  grid.innerHTML = MOODS.map(m => `
+    <div class="mood-card" style="--mood-color:${m.color}" data-genres="${m.genres}" data-query="${m.query}" onclick="loadMoodAnime(this,'${m.query}')">
+      <span class="mood-emoji">${m.emoji}</span>
+      <div class="mood-label">${m.label}</div>
+    </div>`).join('');
+}
+
+async function loadMoodAnime(el, query) {
+  document.querySelectorAll('.mood-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const results = document.getElementById('mood-results');
+  results.innerHTML = createLoader();
+  const data = await Jikan.search(query);
+  if (!data?.data) { results.innerHTML = ''; return; }
+  results.innerHTML = `
+    <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1rem;color:var(--text-secondary)">Results for "${query}"</h3>
+    <div class="anime-grid">${data.data.slice(0,10).map(a => animeCardHTML(a)).join('')}</div>`;
+}
+
+async function loadTrending() {
+  const grid = document.getElementById('trending-grid');
+  const data = await AniList.trending();
+  const list = data?.data?.Page?.media;
+  if (!list) { grid.innerHTML = '<p style="color:var(--text-dim)">Could not load trending.</p>'; return; }
+  grid.innerHTML = list.map(m => anilistCardHTML(m)).join('');
+}
+
+async function loadAiringSchedule() {
+  const list = document.getElementById('airing-list');
+  const data = await AniList.airingSchedule();
+  const schedules = data?.data?.Page?.airingSchedules;
+  if (!schedules?.length) { list.innerHTML = '<p style="color:var(--text-dim)">Schedule unavailable.</p>'; return; }
+  list.innerHTML = schedules.slice(0, 8).map(s => {
+    const img = s.media?.coverImage?.medium || '';
+    const title = s.media?.title?.romaji || 'Unknown';
+    const countdown = countdownTo(s.airingAt);
+    return `
+      <a class="anime-card-wide" href="pages/detail.html?alid=${s.media?.id}">
+        <img src="${img}" alt="${title}">
+        <div class="anime-card-wide-info">
+          <div class="anime-card-wide-title">${title}</div>
+          <div class="anime-card-wide-meta">Episode ${s.episode} · <span style="color:var(--neon-cyan)">${countdown}</span></div>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+async function loadTopAnime() {
+  const grid = document.getElementById('top-grid');
+  const data = await Jikan.topAnime(1, 'bypopularity');
+  if (!data?.data) { grid.innerHTML = ''; return; }
+  grid.innerHTML = data.data.slice(0,10).map((a, i) => animeCardHTML(a, i + 1)).join('');
+}
+
+async function loadQuote() {
+  const container = document.getElementById('quote-container');
+  const data = await Quotes.random();
+  const q = data?.data;
+  if (!q) {
+    container.innerHTML = `<div class="quote-card"><p class="quote-text">Even if I'm worthless and carry demon blood... I want to be the man who supports you!</p><div class="quote-author">Zenitsu Agatsuma · <span class="quote-anime">Demon Slayer</span></div></div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="quote-card">
+      <p class="quote-text">${q.content}</p>
+      <div class="quote-author">${q.character?.name || 'Unknown'} · <span class="quote-anime">${q.anime?.name || ''}</span></div>
+    </div>`;
+}
+
+document.getElementById('new-quote-btn')?.addEventListener('click', () => {
+  cache.clear();
+  loadQuote();
+});
+
+async function loadCurrentlyAiring() {
+  const grid = document.getElementById('airing-top-grid');
+  const data = await Jikan.currentSeason();
+  if (!data?.data) { grid.innerHTML = ''; return; }
+  const sorted = data.data.sort((a,b) => (b.score||0) - (a.score||0));
+  grid.innerHTML = sorted.slice(0, 8).map(a => animeCardHTML(a)).join('');
+}
+
+async function loadGenres() {
+  const chips = document.getElementById('genre-chips-home');
+  const data = await Jikan.getGenres();
+  if (!data?.data) return;
+  const top = data.data.filter(g => g.count > 500).slice(0, 16);
+  chips.innerHTML = top.map(g => `
+    <span class="genre-chip" onclick="loadGenreAnime(${g.mal_id},'${g.name}',this)">${g.name}</span>`).join('');
+}
+
+async function loadGenreAnime(id, name, el) {
+  document.querySelectorAll('#genre-chips-home .genre-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const results = document.getElementById('genre-results');
+  results.innerHTML = createLoader();
+  const data = await Jikan.searchByGenre(id);
+  if (!data?.data) { results.innerHTML = ''; return; }
+  results.innerHTML = data.data.slice(0, 10).map(a => animeCardHTML(a)).join('');
+}
+
+initHome();
+</script>
+</body>
+</html>
